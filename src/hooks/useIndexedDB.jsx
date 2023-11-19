@@ -10,7 +10,17 @@ export const initDB = () => {
       // if the data object store doesn't exist, create it
       if (!db.objectStoreNames.contains("Logs")) {
         console.log("Creating users store");
-        db.createObjectStore("Logs", { keyPath: "traceId" });
+        let store = db.createObjectStore("Logs", { keyPath: "traceId" });
+        store.createIndex("levelIndex", "level", { unique: false });
+        store.createIndex("messageIndex", "message", { unique: false });
+        store.createIndex("resourceIdIndex", "resourceId", { unique: false });
+        store.createIndex("timestampIndex", "timestamp", { unique: false });
+        store.createIndex("traceIdIndex", "traceId", { unique: false });
+        store.createIndex("spanIdIndex", "spanId", { unique: false });
+        store.createIndex("commitIndex", "commit", { unique: false });
+        store.createIndex("parentResourceIdIndex", "parentResourceId", {
+          unique: false,
+        });
         newDB = true;
       }
       // no need to resolve here
@@ -43,7 +53,6 @@ export const addData = (storeName, data) => {
         return new Promise((itemResolve) => {
           const addRequest = store.add(item);
           addRequest.onsuccess = () => {
-            console.log("Added", item);
             itemResolve(item);
           };
 
@@ -88,7 +97,6 @@ export const getData = (storeName) => {
     request.onsuccess = () => {
       console.log("request.onsuccess - getData");
       const db = request.result;
-
       const tx = db.transaction(storeName, "readonly");
       const store = tx.objectStore(storeName);
       const getAllRequest = store.getAll();
@@ -117,4 +125,104 @@ export const getData = (storeName) => {
       }
     };
   });
+};
+export const queryLogsByIndex = (indexQueries) => {
+  console.log(indexQueries);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("LogsDB", version);
+
+    request.onsuccess = () => {
+      console.log("request.onsuccess - getData", indexQueries);
+      const db = request.result;
+      let transaction = db.transaction("Logs", "readonly");
+      let store = transaction.objectStore("Logs");
+
+      // Create promises for each index query dynamically
+      const promises = indexQueries.map(({ indexName, value }) => {
+        return new Promise((resolveIndex, rejectIndex) => {
+          let index = store.index(indexName);
+          let logs = [];
+          let range = IDBKeyRange.only(value);
+
+          const request = index.openCursor(range);
+
+          request.onsuccess = (event) => {
+            let cursor = event.target.result;
+            if (cursor) {
+              logs.push(cursor.value);
+              cursor.continue();
+            } else {
+              resolveIndex(logs);
+            }
+          };
+
+          request.onerror = () => {
+            rejectIndex(`Error querying logs by ${indexName}`);
+          };
+        });
+      });
+
+      // Use Promise.all to wait for all index queries to complete
+      Promise.all(promises)
+        .then((results) => {
+          // Combine or filter results as needed based on your logic
+          const combinedResults = combineResults(results, indexQueries);
+          resolve(combinedResults);
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    };
+
+    request.onerror = () => {
+      reject("Error opening database");
+    };
+  });
+};
+const combineResults = (results, indexQueries) => {
+  // Use concat to merge arrays into a single flat array
+  let tempResult = [].concat(...results);
+  console.log(tempResult);
+  const traceIds = new Set();
+  tempResult = tempResult.filter((obj) => {
+    if (!traceIds.has(obj.traceId)) {
+      traceIds.add(obj.traceId);
+      return true;
+    }
+
+    return false;
+  });
+  console.log(tempResult, traceIds);
+  tempResult = tempResult.filter((result) => {
+    let take = true;
+    indexQueries.map(({ indexName, value }) => {
+      if (indexName === "levelIndex") {
+        if (result.level != value) take = false;
+      }
+      if (indexName == "messageIndex") {
+        if (result.message != value) take = false;
+      }
+      if (indexName == "resourceIdIndex") {
+        if (result.resourceId != value) take = false;
+      }
+      if (indexName == "timeStampIndex") {
+        if (result.timeStamp != value) take = false;
+      }
+      if (indexName == "traceIdIndex") {
+        if (result.traceId != value) take = false;
+      }
+      if (indexName == "spanIdIndex") {
+        if (result.spanId != value) take = false;
+      }
+      if (indexName == "commitIndex") {
+        if (result.commit != value) take = false;
+      }
+      if (indexName == "parentResourceIdIndex") {
+        if (result.parentResourceId != value) take = false;
+      }
+    });
+
+    if (take) return result;
+  });
+  return tempResult;
 };

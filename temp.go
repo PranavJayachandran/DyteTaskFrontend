@@ -34,7 +34,7 @@ func main() {
 
 	// Make 100 POST requests
 	count:=1000
-	for i := 1; i <= 1000; i++ {
+	for i := 1; i <= 10; i++ {
 		count++
 
 		postData := LogData{
