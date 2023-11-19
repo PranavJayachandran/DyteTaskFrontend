@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Row from "./Row";
 import { boxStyle, getStyles } from "../utils/styleSelector";
+import { addData, getData, initDB } from "../hooks/useIndexedDB";
 
 function Table() {
   const columnNames = [
     "level",
     "message",
     "resourceId",
-    "timestamp",
+    "timeStamp",
     "traceId",
     "spanId",
     "commit",
@@ -15,70 +16,38 @@ function Table() {
   ];
 
   const [logs, setLogs] = useState([]);
+  const fetchData = useCallback(async () => {
+    const status = await initDB();
+    console.log(status.newDb);
+    if (status.newDb === true) {
+      var requestOptions = {
+        method: "GET",
+        redirect: "follow",
+      };
+
+      fetch("http://localhost:3000", requestOptions)
+        .then((response) => response.json())
+        .then(async (result) => {
+          try {
+            const res = await addData("Logs", result);
+          } catch (err) {
+            if (err instanceof Error) {
+              console.error(err);
+            } else {
+              console.log("Something went wrong");
+            }
+          }
+          setLogs(result);
+        })
+        .catch((error) => console.log("error", error));
+    } else {
+      setLogs(await getData("Logs"));
+    }
+  }, [initDB, addData, setLogs]);
+
   useEffect(() => {
-    setLogs([
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-      {
-        level: "error",
-        message: "Failed to connect to DB",
-        resourceId: "server-1234",
-        timestamp: "2023-09-15T08:00:00Z",
-        traceId: "abc-xyz-123",
-        spanId: "span-456",
-        commit: "5e5342f",
-        parentResourceId: "server-0987",
-      },
-    ]);
-  }, []);
+    fetchData();
+  }, [fetchData]);
   return (
     <div className="flex flex-col justify-center items-center">
       <div className="flex">
@@ -94,7 +63,7 @@ function Table() {
       </div>
       <div>
         {logs.map((item, index) => (
-          <Row log={item} index={index} />
+          <Row key={index} log={item} index={index} />
         ))}
       </div>
     </div>

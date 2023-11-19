@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { boxStyle, getStyles } from "../utils/styleSelector";
 
 function Row({ log, index }) {
@@ -11,8 +11,8 @@ function Row({ log, index }) {
       <div className={`${getStyles("resourceId")} ${boxStyle()}`}>
         {log.resourceId}
       </div>
-      <div className={`${getStyles("timestamp")} ${boxStyle()}`}>
-        {log.timestamp}
+      <div className={`${getStyles("timeStamp")} ${boxStyle()}`}>
+        {log.timeStamp}
       </div>
       <div className={`${getStyles("traceId")} ${boxStyle()}`}>
         {log.traceId}
@@ -26,4 +26,4 @@ function Row({ log, index }) {
   );
 }
 
-export default Row;
+export default memo(Row);

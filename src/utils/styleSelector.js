@@ -6,8 +6,8 @@ export const getStyles = (columnName) => {
             return "w-60";
         case "resourceId":
             return "w-40";
-        case "timestamp":
-            return "w-40 ";
+        case "timeStamp":
+            return "w-72";
         case "traceId":
             return "w-32";
         case "spanId":
